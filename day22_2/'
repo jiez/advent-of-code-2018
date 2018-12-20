@@ -1,0 +1,421 @@
+//use std::collections::HashSet;
+//use std::cmp::PartialEq;
+
+//#[derive(Copy, Clone)]
+//#[derive(PartialEq)]
+/*
+enum Tool {
+    Torch,
+    Gear,
+    Neither,
+}
+*/
+/*
+//#[derive(Copy, Clone)]
+struct MapCell {
+    // Vector of (to_x, to_y, minutes)
+    // [0]: for Torch
+    // [1]: for Gear
+    // [2]: for Neither
+    minutes: Vec<(usize, usize, u32)>,
+}
+*/
+
+type Map = Vec<Vec<usize>>;
+type ExploreMap = Vec<Vec<Vec<(usize, usize, u32)>>>;
+
+fn main() {
+    let depth = 510;
+    let target_x = 3;
+    let target_y = 3;
+/*
+    let depth = 3339;
+    let target_x = 10;
+    let target_y = 715;
+*/
+    let map_size_x = target_x + 3;
+    let map_size_y = target_y + 3;
+    let mut geo_idx = vec![vec![0; map_size_y]; map_size_x];
+    let mut erosion_lvl = vec![vec![0; map_size_y]; map_size_x];
+    let mut map: Map = vec![vec![0; map_size_y]; map_size_x];
+    let mut explore_map = vec![vec![vec![(0, 0, std::u32::MAX); 3]; map_size_y]; map_size_x];
+    explore_map[target_x][target_y][0] = (target_x, target_y, 0);
+    explore_map[target_x][target_y][1] = (target_x, target_y, 7);
+    explore_map[target_x][target_y][2] = (target_x, target_y, 7);
+
+    geo_idx[0][0] = 0;
+    geo_idx[target_x][target_y] = 0;
+    for i in 1..map_size_x {
+        geo_idx[i][0] = i * 16807;
+    }
+    for j in 1..map_size_y {
+        geo_idx[0][j] = j * 48271;
+    }
+
+    erosion_lvl[0][0] = (geo_idx[0][0] + depth) % 20183;
+    for i in 1..map_size_x {
+        erosion_lvl[i][0] = (geo_idx[i][0] + depth) % 20183;
+    }
+    for j in 1..map_size_y {
+        erosion_lvl[0][j] = (geo_idx[0][j] + depth) % 20183;
+    }
+    for i in 1..map_size_x {
+        for j in 1..map_size_y {
+            if i != target_x || j != target_y {
+                geo_idx[i][j] = erosion_lvl[i - 1][j] * erosion_lvl[i][j - 1];
+            }
+            erosion_lvl[i][j] = (geo_idx[i][j] + depth) % 20183;
+        }
+    }
+
+    //let mut risk_lvl = 0;
+    for i in 0..map_size_x {
+        for j in 0..map_size_y {
+            map[i][j] = erosion_lvl[i][j] % 3;
+            //risk_lvl += map[i][j];
+        }
+    }
+    //println!("risk level = {}", risk_lvl);
+    print_map(&map, target_x, target_y);
+
+    print_explore_map(&explore_map);
+    loop {
+        if ! explore(&map, &mut explore_map) {
+            break;
+        }
+
+        print_explore_map(&explore_map);
+    }
+    println!("shortest time: {}", explore_map[0][0][0].2);
+/*
+    let mut route: HashSet<(usize, usize)> = HashSet::new();
+    let shortest_time = find_shortest_time_route(&map, target_x, target_y, &mut route, 0, 0, Tool::Torch);
+    println!("shortest time: {}", shortest_time);
+*/
+}
+
+fn print_map(map: &Map, target_x: usize, target_y: usize) {
+    let map_x_size = map.len();
+    let map_y_size = map[0].len();
+
+    for n in 0..map_y_size {
+        for m in 0..map_x_size {
+            if m == target_x && n == target_y {
+                print!("T");
+            } else {
+            match map[m][n] {
+            0 => print!("."),
+            1 => print!("="),
+            2 => print!("|"),
+            _ => ()
+            }
+            }
+        }
+        println!("");
+    }
+    println!("");
+}
+
+fn print_explore_map(map: &ExploreMap) {
+    let map_x_size = map.len();
+    let map_y_size = map[0].len();
+
+    for n in 0..map_y_size {
+        for m in 0..map_x_size {
+            print!("[");
+            for k in 0..3 {
+                if map[m][n][k].2 == std::u32::MAX {
+                    print!("(_,_)_");
+                } else {
+                    print!("({:1},{:1}){:1}", map[m][n][k].0, map[m][n][k].1, map[m][n][k].2);
+                }
+                if k != 2 { print!(" ")}
+            }
+            print!("]");
+        }
+        println!("");
+    }
+    println!("");
+}
+
+/*
+fn print_map_with_me(map: &Map, target_x: usize, target_y: usize, me_x: usize, me_y: usize) {
+    let map_x_size = map.len();
+    let map_y_size = map[0].len();
+
+    for n in 0..map_y_size {
+        for m in 0..map_x_size {
+            if m == me_x && n == me_y {
+                print!("*");
+            } else if m == target_x && n == target_y {
+                print!("T");
+            } else {
+            match map[m][n] {
+            0 => print!("."),
+            1 => print!("="),
+            2 => print!("|"),
+            _ => ()
+            }
+            }
+        }
+        println!("");
+    }
+    println!("");
+}
+*/
+/*
+fn print_route(map: &ExploreMap, target_x: usize, target_y: usize) {
+    let x = 0;
+    let y = 0;
+    loop {
+        print_map_with_me(map, target_x, target_y, x, y);
+        if x == target_x && y == target_y {
+            break;
+        }
+        let a = ExploreMap[x]
+*/
+fn explore(map: &Map, explore_map: &mut ExploreMap) -> bool {
+    let map_size_x = map.len();
+    let map_size_y = map[0].len();
+    let mut changed = false;
+/*
+    let x1 = x as i32;
+    let y1 = y as i32;
+    for (a, b) in [(x1 - 1, y1), (x1, y1 - 1), (x1 + 1, y1), (x1, y1 + 1)].iter() {
+        if *a < 0 || *b < 0 {
+            continue;
+        }
+        let new_x = *a as usize;
+        let new_y = *b as usize;
+        if new_x >= map_size_x || new_y >= map_size_y || route.contains(&(new_x, new_y)) {
+            continue;
+        }
+*/
+    for i in 0..map_size_x {
+        for j in 0..map_size_y {
+            for t in 0..3 {
+                if ! usable(map[i][j], t) {
+                    continue;
+                }
+
+                let x = i as i32;
+                let y = j as i32;
+                let mut to_x = 0;
+                let mut to_y = 0;
+                let mut min_minutes = std::u32::MAX;
+                for (a, b) in [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1)].iter() {
+                    if *a < 0 || *b < 0 {
+                        continue;
+                    }
+                    let x1 = *a as usize;
+                    let y1 = *b as usize;
+                    if x1 >= map_size_x || y1 >= map_size_y {
+                        continue;
+                    }
+                    for t1 in 0..3 {
+                        let mut minutes = explore_map[x1][y1][t1].2;
+                        if minutes == std::u32::MAX {
+                            continue;
+                        }
+                        minutes += 1;
+                        if ! usable(map[i][j], t1) {
+                            minutes += 7;
+                        }
+                        if minutes < min_minutes {
+                            min_minutes = minutes;
+                            to_x = x1;
+                            to_y = y1;
+                        }
+                    }
+                }
+                if min_minutes < explore_map[i][j][t].2 {
+                    explore_map[i][j][t].0 = to_x;
+                    explore_map[i][j][t].1 = to_y;
+                    explore_map[i][j][t].2 = min_minutes;
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    changed
+}
+
+fn usable (region_type: usize, tool: usize) -> bool {
+    let mut result = true;
+    if region_type == 0 && tool == 2 {
+        result = false;
+    } else if region_type == 1 && tool == 0 {
+        result = false;
+    } else if region_type == 2 && tool == 1 {
+        result = false;
+    }
+    result
+}
+
+// if flood_map changed, return true, other return false
+/*
+fn flood(map: &Map, start: (usize, usize), ends: &HashSet<(usize, usize)>, flood_map: &mut FloodMap) -> bool {
+    let mut boundary = HashSet::new();
+
+    if ends.contains(&start) {
+        return 0;
+    }
+
+    boundary.insert(start);
+
+    'outer: loop {
+        let mut new_boundary = HashSet::new();
+        for p in boundary {
+            let x = p.0;
+            let y = p.1;
+            
+            for (temp_x, temp_y) in [(x - 1, y), (x, y - 1), (x, y + 1), (x + 1, y)].iter() {
+                let x1 = *temp_x;
+                let y1 = *temp_y;
+
+                if (x1, y1) == start {
+                    continue;
+                }
+                if flood_map[x1][y1] != 0 {
+                    continue;
+                }
+                if map[x1][y1] == 3 && ! ends.contains(&(x1, y1)) {
+                    continue;
+                }
+                new_boundary.insert((x1, y1));
+            }
+        }
+
+        if new_boundary.is_empty() {
+            break;
+        }
+
+        step += 1;
+        for p in &new_boundary {
+            flood_map[p.0][p.1] = step;
+        }
+
+        for p in &new_boundary {
+            if ends.contains(&p) {
+                break 'outer;
+            }
+        }
+
+        boundary = new_boundary;
+    }
+
+    step
+}
+*/
+
+/*
+fn find_shortest_time_route(map: &Map, target_x: usize, target_y: usize, route: &mut HashSet<(usize, usize)>, x: usize, y: usize, tool: Tool) -> u32 {
+    let map_size_x = map.len();
+    let map_size_y = map[0].len();
+    let x1 = x as i32;
+    let y1 = y as i32;
+    let mut shortest_time = std::u32::MAX;
+
+    print!("({}, {}), ", x, y);
+
+    if x == target_x && y == target_y {
+        if tool != Tool::Torch {
+            println!("{}", 7);
+            return 7;
+        } else {
+            println!("{}", 0);
+            return 0;
+        }
+    }
+
+    route.insert((x, y));
+
+    for (a, b) in [(x1 - 1, y1), (x1, y1 - 1), (x1 + 1, y1), (x1, y1 + 1)].iter() {
+        if *a < 0 || *b < 0 {
+            continue;
+        }
+        let new_x = *a as usize;
+        let new_y = *b as usize;
+        if new_x >= map_size_x || new_y >= map_size_y || route.contains(&(new_x, new_y)) {
+            continue;
+        }
+
+        if map[new_x][new_y] == 0 /* rocky */ {
+            // we can use Torch or Gear
+            let mut time = find_shortest_time_route(map, target_x, target_y, &mut route.clone(), new_x, new_y, Tool::Torch);
+            if time != std::u32::MAX {
+                time += 1;
+                if tool != Tool::Torch {
+                    time += 7;
+                }
+            }
+            if time < shortest_time {
+                shortest_time = time;
+            }
+
+            let mut time = find_shortest_time_route(map, target_x, target_y, &mut route.clone(), new_x, new_y, Tool::Gear);
+            if time != std::u32::MAX {
+                time += 1;
+                if tool != Tool::Gear {
+                    time += 7;
+                }
+            }
+            if time < shortest_time {
+                shortest_time = time;
+            }
+        } else if map[new_x][new_y] == 1 /* wet */ {
+            // we can use Gear or Neither
+            let mut time = find_shortest_time_route(map, target_x, target_y, &mut route.clone(), new_x, new_y, Tool::Gear);
+            if time != std::u32::MAX {
+                time += 1;
+                if tool != Tool::Gear {
+                    time += 7;
+                }
+            }
+            if time < shortest_time {
+                shortest_time = time;
+            }
+
+            let mut time = find_shortest_time_route(map, target_x, target_y, &mut route.clone(), new_x, new_y, Tool::Neither);
+            if time != std::u32::MAX {
+                time += 1;
+                if tool != Tool::Neither {
+                    time += 7;
+                }
+            }
+            if time < shortest_time {
+                shortest_time = time;
+            }
+        } else if map[new_x][new_y] == 2 /* narrow */ {
+            // we can use Torch or Neither
+            let mut time = find_shortest_time_route(map, target_x, target_y, &mut route.clone(), new_x, new_y, Tool::Torch);
+            if time != std::u32::MAX {
+                time += 1;
+                if tool != Tool::Torch {
+                    time += 7;
+                }
+            }
+            if time < shortest_time {
+                shortest_time = time;
+            }
+
+            let mut time = find_shortest_time_route(map, target_x, target_y, &mut route.clone(), new_x, new_y, Tool::Neither);
+            if time != std::u32::MAX {
+                time += 1;
+                if tool != Tool::Neither {
+                    time += 7;
+                }
+            }
+            if time < shortest_time {
+                shortest_time = time;
+            }
+        }
+    }
+
+    println!("{}", shortest_time);
+
+    shortest_time
+}
+*/
+

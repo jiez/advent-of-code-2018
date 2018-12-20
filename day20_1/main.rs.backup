@@ -1,0 +1,236 @@
+use std::fs::File;
+use std::io::Read;
+use std::collections::HashSet;
+
+type Map = Vec<Vec<u32>>;
+/*
+           x
+           |
+           v
+       ....o....
+       ....o....
+   y ->....o....
+       ....o....
+
+   map[x][y]
+*/
+
+fn main() {
+/*
+    let mut file = File::open("/home/jie/projects/rust/advent/day20_1/input")
+        .expect("Error cannot open the file");
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .expect("Error reading input file");
+*/
+
+//    let contents = String::from("^ENWWW(NEEE|SSE(EE|N))$");
+//    let contents = String::from("^ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN$");
+    let contents = String::from("^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$");
+    let routes = contents.into_bytes();
+
+    //let map_max_size = routes.len() * 2 + 1;
+    //let orig_x = routes.len();
+    //let orig_y = routes.len();
+    let map_max_size = routes.len() / 2 * 2 + 1;
+    let orig_x = routes.len() / 2;
+    let orig_y = routes.len() / 2;
+
+    println!("map max size: {}, origin point: ({}, {})", map_max_size, orig_x, orig_y);
+
+    // 0: '.'
+    // 1: '|'
+    // 2: '-'
+    // 3: '#'
+
+    // all walls at beginning
+    let mut map: Map = vec![vec![3; map_max_size]; map_max_size];
+    map[orig_x][orig_y] = 0;
+
+    walk(&routes, 1, &mut map, orig_x, orig_y);
+
+    print_map(&map, orig_x, orig_y);
+}
+
+fn mark_map(map: &mut Map, x: usize, y:usize, direction: u8) -> (usize, usize) {
+    match direction as char {
+        'N' => {
+            map[x][y - 1] = 2;
+            map[x][y - 2] = 0;
+            (x, y - 2)
+        }
+        'S' => {
+            map[x][y + 1] = 2;
+            map[x][y + 2] = 0;
+            (x, y + 2)
+        }
+        'W' => {
+            map[x - 1][y] = 1;
+            map[x - 2][y] = 0;
+            (x - 2, y)
+        }
+        'E' => {
+            map[x + 1][y] = 1;
+            map[x + 2][y] = 0;
+            (x + 2, y)
+        }
+        _ => (0, 0)
+    }
+}
+
+fn walk(routes: &Vec<u8>, index: usize, map: &mut Map, x: usize, y: usize) {
+    let mut i = index;
+    let mut x1 = x;
+    let mut y1 = y;
+
+    println!("enter walk @{} ({},{})", index, x, y);
+
+    loop {
+        println!("{}", routes[i] as char);
+        match routes[i] as char {
+            'N' | 'S' | 'W' | 'E' => {
+                //print!("{}", routes[i] as char);
+                //walk on map
+                let (a, b) = mark_map(map, x1, y1, routes[i]);
+                x1 = a;
+                y1 = b;
+                i += 1;
+                print_map(&map, 25, 25);
+            }
+
+            '(' => {
+                let (new_heads, new_index) = walk_1(routes, i + 1, map, x1, y1);
+                for head in new_heads {
+                    walk(routes, new_index, map, head.0, head.1);
+                }
+                return;
+            }
+
+            '$' => {
+                println!("return from walk");
+                return;
+            }
+
+            _ => (),
+        }
+    }
+}
+
+fn walk_1(routes: &Vec<u8>, index: usize, map: &mut Map, x: usize, y: usize) -> (HashSet<(usize, usize)>, usize) {
+    let mut heads = HashSet::new();
+    let mut i = index;
+    let mut x1 = x;
+    let mut y1 = y;
+    println!("enter walk_1 @{} ({},{})", index, x, y);
+    loop {
+        println!("{}", routes[i] as char);
+        match routes[i] as char {
+            'N' | 'S' | 'W' | 'E' => {
+                //print!("{}", routes[i] as char);
+                //walk on map,
+                let (a, b) = mark_map(map, x1, y1, routes[i]);
+                x1 = a;
+                y1 = b;
+                i += 1;
+                print_map(&map, 25, 25);
+            }
+
+            '|' => {
+                heads.insert((x1, y1));
+                x1 = x; y1 = y;
+                i += 1;
+            }
+
+            ')' => {
+                heads.insert((x1, y1));
+                println!("return from walk_1  @{}", i + 1);
+                return (heads, i + 1);
+            }
+
+            '(' => {
+                let (new_heads, new_index) = walk_1(routes, i + 1, map, x1, y1);
+                for head in new_heads {
+                    let (heads1, i1) = walk_1(routes, new_index, map, head.0, head.1);
+                    for head1 in heads1 {
+                        heads.insert(head1);
+                    }
+                    println!("from walk_1  @{}", i1);
+                    i = i1;
+                }
+            }
+
+            '$' => { return (HashSet::new(), i); }
+
+            _ => (),
+        }
+    }
+}
+
+fn print_map(map: &Map, orig_x: usize, orig_y: usize) {
+    let map_x_size = map.len();
+    let map_y_size = map[0].len();
+
+    for n in 0..map_y_size {
+        for m in 0..map_x_size {
+            if m == orig_x && n == orig_y {
+                print!("X");
+            } else {
+            match map[m][n] {
+            0 => print!("."),
+            1 => print!("|"),
+            2 => print!("-"),
+            3 => print!("#"),
+            4 => print!("~"),
+            _ => ()
+            }
+            }
+        }
+        println!("");
+    }
+    println!("");
+}
+
+/* Algorithm:
+
+data structures:
+
+current_heads: HashSet<(x,y)>
+
+level_heads: HashSet<(x,y)>
+
+heads_stack: 
+
+
+current_heads.insert(&(orig_x, orig_y));
+index = 1;
+loop {
+    match routes[index] {
+        'N', 'S', 'W', 'E' => {
+            for head in current_heads {
+                walk on map
+                update head
+            }
+        }
+
+        '(' => {
+            push current_heads onto stack
+        }
+
+        '|' => {
+            move all heads from current_heads into level_heads
+            init current_heads with the top heads on stack
+        }
+
+        ')' => {
+            move all heads from current_heads into level_heads
+            pop stack
+        }
+
+        '$' => {
+            return;
+        }
+    }
+    index += 1;
+}
+
+*/
