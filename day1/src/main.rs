@@ -14,7 +14,7 @@ fn main() {
     freqs.insert(freq);
     while !found {
         for line in contents.lines() {
-            freq += line.parse().unwrap();
+            freq += line.parse::<i32>().unwrap();
             if freqs.contains(&freq) {
                 found = true;
                 break;
